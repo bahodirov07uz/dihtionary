@@ -1,0 +1,7 @@
+[
+  {"id":"1","word":"apple","meaning":"olma","example":"I eat an apple every day","category":"meva"},
+  {"id":"2","word":"book","meaning":"kitob","example":"I read this book yesterday","category":"uy"},
+  {"id":"3","word":"water","meaning":"suv","example":"Drink more water","category":"tabiiy"},
+  {"id":"4","word":"happy","meaning":"xursand, baxtli","example":"She is happy today","category":"his"},
+  {"id":"5","word":"school","meaning":"maktab","example":"I go to school","category":"ta'lim"}
+]
