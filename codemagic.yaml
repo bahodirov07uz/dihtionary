@@ -1,14 +1,16 @@
 workflows:
   android-release:
-    name: Android Release
-    max_build_duration: 60
+    name: Android Release APK
+    max_build_duration: 30
     environment:
-      flutter: 3.27.4
+      flutter: stable
       java: 17
     scripts:
+      - name: Flutter version
+        script: flutter --version
       - name: Get packages
         script: flutter pub get
       - name: Build APK
-        script: flutter build apk --release --android-skip-build-dependency-validation
+        script: flutter build apk --release --no-shrink
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
