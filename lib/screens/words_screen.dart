@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/word.dart';
-import '../models/word_service.dart';
 import 'word_detail_screen.dart';
 
 class WordsScreen extends StatefulWidget {
@@ -15,7 +14,7 @@ class WordsScreen extends StatefulWidget {
 }
 
 class _WordsScreenState extends State<WordsScreen> with SingleTickerProviderStateMixin {
-  String _filter = 'all'; // all, learned, notlearned
+  String _filter = 'all';
   String _search = '';
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -25,6 +24,7 @@ class _WordsScreenState extends State<WordsScreen> with SingleTickerProviderStat
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) return;
       setState(() {
         _filter = ['all', 'notlearned', 'learned'][_tabController.index];
       });
@@ -72,16 +72,19 @@ class _WordsScreenState extends State<WordsScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final learnedCount = widget.words.where((w) => w.isLearned).length;
+    final notLearnedCount = widget.words.length - learnedCount;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F5),
       appBar: AppBar(
-        title: Text("Mening Lug'atim"),
+        title: const Text("Mening Lug'atim"),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(100),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: TextField(
                   controller: _searchController,
                   onChanged: (v) => setState(() => _search = v),
@@ -112,7 +115,7 @@ class _WordsScreenState extends State<WordsScreen> with SingleTickerProviderStat
                       borderSide: const BorderSide(color: Colors.white),
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.15),
+                    fillColor: Colors.white.withAlpha(38),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   ),
                 ),
@@ -125,8 +128,8 @@ class _WordsScreenState extends State<WordsScreen> with SingleTickerProviderStat
                 labelStyle: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w600),
                 tabs: [
                   Tab(text: "Barchasi (${widget.words.length})"),
-                  Tab(text: "Yodlanmadi (${widget.words.where((w) => !w.isLearned).length})"),
-                  Tab(text: "Yodlandi (${widget.words.where((w) => w.isLearned).length})"),
+                  Tab(text: "Yodlanmadi ($notLearnedCount)"),
+                  Tab(text: "Yodlandi ($learnedCount)"),
                 ],
               ),
             ],
@@ -138,20 +141,23 @@ class _WordsScreenState extends State<WordsScreen> with SingleTickerProviderStat
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: filteredWords.length,
-              itemBuilder: (context, i) => _WordCard(
-                word: filteredWords[i],
-                onToggle: () => _toggleLearned(filteredWords[i]),
-                onDelete: () => _deleteWord(filteredWords[i].id),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => WordDetailScreen(
-                      word: filteredWords[i],
-                      onToggle: () => _toggleLearned(filteredWords[i]),
+              itemBuilder: (context, i) {
+                final word = filteredWords[i];
+                return _WordCard(
+                  word: word,
+                  onToggle: () => _toggleLearned(word),
+                  onDelete: () => _deleteWord(word.id),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WordDetailScreen(
+                        word: word,
+                        onToggle: () => _toggleLearned(word),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
     );
   }
@@ -209,7 +215,7 @@ class _WordCard extends StatelessWidget {
         child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
       ),
       confirmDismiss: (_) async {
-        return await showDialog(
+        return await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
             title: const Text("O'chirish"),
@@ -231,12 +237,12 @@ class _WordCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: word.isLearned
-                  ? const Color(0xFF1A6B3C).withOpacity(0.3)
-                  : Colors.grey.withOpacity(0.15),
+                  ? const Color(0xFF1A6B3C).withAlpha(76)
+                  : Colors.grey.withAlpha(38),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withAlpha(10),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -251,8 +257,8 @@ class _WordCard extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     color: word.isLearned
-                        ? const Color(0xFF1A6B3C).withOpacity(0.1)
-                        : Colors.orange.withOpacity(0.1),
+                        ? const Color(0xFF1A6B3C).withAlpha(25)
+                        : Colors.orange.withAlpha(25),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -282,7 +288,7 @@ class _WordCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1A6B3C).withOpacity(0.08),
+                                color: const Color(0xFF1A6B3C).withAlpha(20),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -299,21 +305,15 @@ class _WordCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         word.meaning,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (word.isLearned && word.learnedAt != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          "✓ ${_formatDate(word.learnedAt!)}",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF1A6B3C),
-                          ),
+                          "✓ ${_fmt(word.learnedAt!)}",
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF1A6B3C)),
                         ),
                       ],
                     ],
@@ -326,9 +326,7 @@ class _WordCard extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: word.isLearned
-                          ? const Color(0xFF1A6B3C)
-                          : Colors.grey[100],
+                      color: word.isLearned ? const Color(0xFF1A6B3C) : Colors.grey[100],
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -349,7 +347,6 @@ class _WordCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
-    return "${dt.day}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
-  }
+  String _fmt(DateTime dt) =>
+      "${dt.day}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
 }

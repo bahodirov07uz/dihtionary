@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/word.dart';
 import '../models/word_service.dart';
 import 'words_screen.dart';
@@ -47,29 +46,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF1A6B3C)),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A6B3C)))
           : screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF1A6B3C).withOpacity(0.15),
-        destinations: [
+        indicatorColor: const Color(0xFF1A6B3C).withValues(alpha: 0.15),
+        destinations: const [
           NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            selectedIcon: const Icon(Icons.menu_book, color: Color(0xFF1A6B3C)),
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book, color: Color(0xFF1A6B3C)),
             label: "So'zlar",
           ),
           NavigationDestination(
-            icon: const Icon(Icons.bar_chart_outlined),
-            selectedIcon: const Icon(Icons.bar_chart, color: Color(0xFF1A6B3C)),
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF1A6B3C)),
             label: 'Dashboard',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.upload_file_outlined),
-            selectedIcon: const Icon(Icons.upload_file, color: Color(0xFF1A6B3C)),
+            icon: Icon(Icons.upload_file_outlined),
+            selectedIcon: Icon(Icons.upload_file, color: Color(0xFF1A6B3C)),
             label: 'Yuklash',
           ),
         ],
