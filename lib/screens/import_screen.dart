@@ -32,26 +32,7 @@ class _ImportScreenState extends State<ImportScreen> {
       }
       final file = File(result.files.single.path!);
       final content = await file.readAsString();
-      final List<Word> newWords = type == 'json'
-          ? WordService.parseJson(content)
-          : WordService.parseCsv(content);
-
-      if (newWords.isEmpty) {
-        setState(() {
-          _loading = false;
-          _lastMessage = "Fayl bo'sh yoki format noto'g'ri";
-          _lastSuccess = false;
-        });
-        return;
-      }
-      final existing = Set<String>.from(widget.words.map((w) => w.word.toLowerCase()));
-      final toAdd = newWords.where((w) => !existing.contains(w.word.toLowerCase())).toList();
-      await widget.onWordsChanged([...widget.words, ...toAdd]);
-      setState(() {
-        _loading = false;
-        _lastMessage = "${toAdd.length} ta yangi so'z qo'shildi!";
-        _lastSuccess = true;
-      });
+      await _importContent(content, type);
     } catch (e) {
       setState(() {
         _loading = false;
@@ -59,6 +40,137 @@ class _ImportScreenState extends State<ImportScreen> {
         _lastSuccess = false;
       });
     }
+  }
+
+  Future<void> _importContent(String content, String type) async {
+    final List<Word> newWords = type == 'json'
+        ? WordService.parseJson(content)
+        : WordService.parseCsv(content);
+
+    if (newWords.isEmpty) {
+      setState(() {
+        _loading = false;
+        _lastMessage = "Fayl bo'sh yoki format noto'g'ri";
+        _lastSuccess = false;
+      });
+      return;
+    }
+    final existing = Set<String>.from(widget.words.map((w) => w.word.toLowerCase().trim()));
+    final toAdd = newWords.where((w) => !existing.contains(w.word.toLowerCase().trim())).toList();
+    await widget.onWordsChanged([...widget.words, ...toAdd]);
+    setState(() {
+      _loading = false;
+      _lastMessage = "${toAdd.length} ta yangi so'z qo'shildi!"
+          + (newWords.length - toAdd.length > 0
+              ? " (${newWords.length - toAdd.length} ta mavjud)"
+              : "");
+      _lastSuccess = true;
+    });
+  }
+
+  Future<void> _showJsonPasteDialog() async {
+    final ctrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20, right: 20, top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("JSON matn kiritish",
+              style: GoogleFonts.ibmPlexSans(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text("So'zlar ro'yxatini JSON formatida kiriting",
+              style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: TextField(
+                controller: ctrl,
+                maxLines: 8,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(14),
+                  hintText: '[{"word":"apple","meaning":"olma","category":"meva"}]',
+                  hintStyle: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Format hint
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Maydonlar:", style: TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 12, color: Colors.amber[800])),
+                  const SizedBox(height: 4),
+                  Text(
+                    "• word / so'z  (majburiy)\n"
+                    "• meaning / manosi  (majburiy)\n"
+                    "• example / misol  (ixtiyoriy)\n"
+                    "• category / kategoriya  (ixtiyoriy)",
+                    style: TextStyle(fontSize: 11, color: Colors.amber[900]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text("Bekor qilish"),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final text = ctrl.text.trim();
+                      if (text.isEmpty) return;
+                      Navigator.pop(ctx);
+                      setState(() => _loading = true);
+                      await _importContent(text, 'json');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A6B3C),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text("Qo'shish",
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _addManually() async {
@@ -102,7 +214,7 @@ class _ImportScreenState extends State<ImportScreen> {
                     return;
                   }
                   final newWord = Word(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    id: '${DateTime.now().millisecondsSinceEpoch}_manual',
                     word: wordCtrl.text.trim(),
                     meaning: meaningCtrl.text.trim(),
                     example: exampleCtrl.text.trim().isEmpty ? null : exampleCtrl.text.trim(),
@@ -199,39 +311,53 @@ class _ImportScreenState extends State<ImportScreen> {
                 ),
               ),
 
+            // FILE import
             Text("Fayl orqali yuklash",
               style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 12),
             _ImportCard(
               icon: Icons.data_object,
-              title: "JSON yuklash",
-              subtitle: 'word, meaning, example, category maydonlari',
+              title: "JSON fayl yuklash",
+              subtitle: ".json fayl tanlash",
               color: const Color(0xFF1A6B3C),
               onTap: _loading ? null : () => _pickFile('json'),
             ),
             const SizedBox(height: 12),
             _ImportCard(
               icon: Icons.table_chart,
-              title: "CSV yuklash",
-              subtitle: "word,meaning,example,category ustunlari",
+              title: "CSV fayl yuklash",
+              subtitle: ".csv fayl tanlash",
               color: const Color(0xFF2196F3),
               onTap: _loading ? null : () => _pickFile('csv'),
             ),
+
             if (_loading) ...[
               const SizedBox(height: 16),
               const Center(child: CircularProgressIndicator(color: Color(0xFF1A6B3C))),
             ],
+
             const SizedBox(height: 24),
-            Text("Qo'lda qo'shish",
+
+            // TEXT import
+            Text("Matn orqali qo'shish",
               style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 12),
             _ImportCard(
+              icon: Icons.code,
+              title: "JSON matn kiritish",
+              subtitle: "JSON ni to'g'ridan-to'g'ri yozing / nusxalang",
+              color: Colors.deepPurple,
+              onTap: _showJsonPasteDialog,
+            ),
+            const SizedBox(height: 12),
+            _ImportCard(
               icon: Icons.add_circle_outline,
-              title: "Yangi so'z qo'shish",
-              subtitle: "Bitta so'z qo'lda kiritish",
-              color: Colors.purple,
+              title: "Bitta so'z qo'shish",
+              subtitle: "Forma orqali qo'lda kiritish",
+              color: Colors.teal,
               onTap: _addManually,
             ),
+
             const SizedBox(height: 24),
 
             // Format info
@@ -258,7 +384,7 @@ class _ImportScreenState extends State<ImportScreen> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
                     child: const Text(
-                      '[{"word":"apple","meaning":"olma","category":"meva"}]',
+                      '[{"word":"apple","meaning":"olma","category":"meva"},\n{"word":"book","meaning":"kitob"}]',
                       style: TextStyle(fontSize: 11, fontFamily: 'monospace')),
                   ),
                   const SizedBox(height: 8),
@@ -268,7 +394,7 @@ class _ImportScreenState extends State<ImportScreen> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
                     child: const Text(
-                      "word,meaning,category\napple,olma,meva",
+                      "word,meaning,category\napple,olma,meva\nbook,kitob,ta'lim",
                       style: TextStyle(fontSize: 11, fontFamily: 'monospace')),
                   ),
                 ],
@@ -318,7 +444,7 @@ class _ImportCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: onTap != null ? Colors.white : Colors.grey[100],
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withAlpha(51)),
         ),
@@ -337,12 +463,10 @@ class _ImportCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                    style: GoogleFonts.ibmPlexSans(
-                      fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(title, style: GoogleFonts.ibmPlexSans(
+                    fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 ],
               ),
             ),

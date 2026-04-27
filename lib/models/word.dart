@@ -19,9 +19,18 @@ class Word {
     this.reviewCount = 0,
   });
 
+  // Counter for unique IDs when parsing
+  static int _counter = 0;
+  static String _uniqueId() {
+    _counter++;
+    return '${DateTime.now().millisecondsSinceEpoch}_$_counter';
+  }
+
   factory Word.fromJson(Map<String, dynamic> json) {
     return Word(
-      id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: json['id']?.toString().isNotEmpty == true
+          ? json['id'].toString()
+          : _uniqueId(),
       word: json['word']?.toString() ?? '',
       meaning: json['meaning']?.toString() ?? json['manosi']?.toString() ?? '',
       example: json['example']?.toString() ?? json['misol']?.toString(),
